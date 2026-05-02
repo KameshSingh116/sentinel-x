@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pythonlibs/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+
+# Database & logs
+sentinel-x/database/*.db
+sentinel-x/logs/*.json
+
+# Environment
+.env
+.env.local
+*.env
+
+# Node / React Native
+node_modules/
+.expo/
+*.lock
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Sentinel-X{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-title"><i class="fas fa-gauge-high me-2 text-info"></i>System Dashboard</div>
+  <div class="d-flex align-items-center gap-3">
+    <span id="refreshCountdown"><span class="spinner-sm" id="loadSpinner" style="display:none"></span> Next refresh: <span id="countdownVal">30</span>s</span>
+    <button class="btn-accent" onclick="loadAll()"><i class="fas fa-rotate me-1"></i>Refresh Now</button>
+  </div>
+</div>
+
+<div class="page-body">
+  <!-- Stat Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="stat-card accent">
+        <div class="stat-label">CPU Usage</div>
+        <div class="stat-value" id="cpuVal">—</div>
+        <div class="progress-bar-custom"><div class="progress-fill" id="cpuBar" style="width:0%;background:linear-gradient(90deg,#00d4ff,#7b2ff7)"></div></div>
+        <i class="fas fa-microchip stat-icon"></i>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card warning">
+        <div class="stat-label">Memory Usage</div>
+        <div class="stat-value" id="memVal">—</div>
+        <div class="progress-bar-custom"><div class="progress-fill" id="memBar" style="width:0%;background:#ffdd57"></div></div>
+        <i class="fas fa-memory stat-icon"></i>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card danger">
+        <div class="stat-label">Open Alerts</div>
+        <div class="stat-value" id="alertCount">—</div>
+        <i class="fas fa-bell stat-icon"></i>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card success">
+        <div class="stat-label">Network Connections</div>
+        <div class="stat-value" id="netConns">—</div>
+        <i class="fas fa-network-wired stat-icon"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <!-- System Info -->
+    <div class="col-lg-6">
+      <div class="card-dark h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0 text-info"><i class="fas fa-server me-2"></i>System Overview</h6>
+          <span id="healthBadge" class="badge">—</span>
+        </div>
+        <div id="systemInfo" class="text-muted small">Loading…</div>
+      </div>
+    </div>
+    <!-- Network Summary -->
+    <div class="col-lg-6">
+      <div class="card-dark h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0 text-info"><i class="fas fa-globe me-2"></i>Network Summary</h6>
+          <span id="netAlertBadge" class="badge">—</span>
+        </div>
+        <div id="networkInfo" class="text-muted small">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disk Usage -->
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card-dark">
+        <h6 class="mb-3 text-info"><i class="fas fa-hard-drive me-2"></i>Disk Usage</h6>
+        <div id="diskInfo" class="row g-2">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Alerts -->
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card-dark">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0 text-info"><i class="fas fa-triangle-exclamation me-2"></i>Recent Alerts</h6>
+          <a href="/alerts" class="btn-outline-accent">View All</a>
+        </div>
+        <div id="recentAlerts">Loading…</div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card-dark">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0 text-info"><i class="fas fa-chart-bar me-2"></i>Log Stats</h6>
+        </div>
+        <div id="logStats">Loading…</div>
+        <hr style="border-color:var(--border);margin:16px 0">
+        <button class="btn-accent w-100" onclick="triggerTestAlert()">
+          <i class="fas fa-vial me-2"></i>Trigger Test Alert
+        </button>
+        <div id="testAlertMsg" class="mt-2 small"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let countdownTimer, countdownVal = 30;
+
+function severity_badge(sev) {
+  return `<span class="badge badge-severity-${sev} rounded-pill">${sev.toUpperCase()}</span>`;
+}
+
+async function loadStatus() {
+  const r = await fetch('/api/status');
+  const d = await r.json();
+  if (!d.success) return;
+  const sys = d.data.system;
+  const net = d.data.network;
+
+  document.getElementById('cpuVal').textContent = sys.cpu.usage_percent.toFixed(1) + '%';
+  document.getElementById('cpuBar').style.width = sys.cpu.usage_percent + '%';
+  document.getElementById('memVal').textContent = sys.memory.usage_percent.toFixed(1) + '%';
+  document.getElementById('memBar').style.width = sys.memory.usage_percent + '%';
+  document.getElementById('netConns').textContent = net.total_connections;
+
+  const health = sys.health;
+  const hColors = {healthy:'success', warning:'warning', critical:'danger'};
+  const hBadge = document.getElementById('healthBadge');
+  hBadge.className = `badge bg-${hColors[health]||'secondary'}`;
+  hBadge.textContent = health.toUpperCase();
+
+  document.getElementById('systemInfo').innerHTML = `
+    <div class="row g-2">
+      <div class="col-6"><div class="card-dark2"><div class="stat-label">CPU Cores</div><div style="font-size:1.1rem;color:#e6f1ff">${sys.cpu.core_count}</div></div></div>
+      <div class="col-6"><div class="card-dark2"><div class="stat-label">CPU Freq</div><div style="font-size:1.1rem;color:#e6f1ff">${sys.cpu.frequency_mhz || 'N/A'} MHz</div></div></div>
+      <div class="col-6"><div class="card-dark2"><div class="stat-label">RAM Total</div><div style="font-size:1.1rem;color:#e6f1ff">${sys.memory.total_gb} GB</div></div></div>
+      <div class="col-6"><div class="card-dark2"><div class="stat-label">RAM Used</div><div style="font-size:1.1rem;color:#e6f1ff">${sys.memory.used_gb} GB</div></div></div>
+      <div class="col-12"><div class="card-dark2"><div class="stat-label">Uptime</div><div style="font-size:1rem;color:#e6f1ff">${formatUptime(sys.uptime_seconds)}</div></div></div>
+      ${sys.system_alerts.length ? `<div class="col-12"><div class="card-dark2" style="border-color:rgba(255,56,96,0.3)">${sys.system_alerts.map(a=>`<div style="color:#ff3860;font-size:0.8rem"><i class="fas fa-exclamation-triangle me-1"></i>${a}</div>`).join('')}</div></div>` : ''}
+    </div>
+  `;
+
+  const netAlert = net.alert;
+  const nBadge = document.getElementById('netAlertBadge');
+  nBadge.className = `badge ${netAlert ? 'badge-severity-high' : 'badge-severity-info'}`;
+  nBadge.textContent = netAlert ? 'SUSPICIOUS ACTIVITY' : 'NORMAL';
+
+  document.getElementById('networkInfo').innerHTML = `
+    <div class="row g-2">
+      <div class="col-6"><div class="card-dark2"><div class="stat-label">Total Conns</div><div style="font-size:1.1rem;color:#e6f1ff">${net.total_connections}</div></div></div>
+      <div class="col-6"><div class="card-dark2"><div class="stat-label">Suspicious</div><div style="font-size:1.1rem;color:${net.suspicious_connections>0?'#ff3860':'#23d160'}">${net.suspicious_connections}</div></div></div>
+      <div class="col-6"><div class="card-dark2"><div class="stat-label">Bytes Sent</div><div style="font-size:0.95rem;color:#e6f1ff">${net.io.bytes_sent_mb} MB</div></div></div>
+      <div class="col-6"><div class="card-dark2"><div class="stat-label">Bytes Recv</div><div style="font-size:0.95rem;color:#e6f1ff">${net.io.bytes_recv_mb} MB</div></div></div>
+      <div class="col-12"><div class="card-dark2"><div class="stat-label">External IPs</div><div style="font-size:0.8rem;color:#8892b0;word-break:break-all">${net.external_ips.slice(0,5).join(', ')||'None'}</div></div></div>
+    </div>
+  `;
+
+  const diskHtml = net ? (sys.disks||[]).map(d=>`
+    <div class="col-md-4">
+      <div class="card-dark2">
+        <div class="stat-label">${d.mountpoint} <span style="color:#8892b0">(${d.fstype})</span></div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span style="font-size:0.95rem;color:#e6f1ff">${d.usage_percent}%</span>
+          <span style="font-size:0.75rem;color:#8892b0">${d.used_gb}/${d.total_gb} GB</span>
+        </div>
+        <div class="progress-bar-custom"><div class="progress-fill" style="width:${d.usage_percent}%;background:${d.usage_percent>85?'#ff3860':d.usage_percent>65?'#ffdd57':'#23d160'}"></div></div>
+      </div>
+    </div>
+  `).join('') : '';
+  document.getElementById('diskInfo').innerHTML = diskHtml || '<div class="col-12 text-muted">No disk info</div>';
+}
+
+async function loadAlerts() {
+  const r = await fetch('/api/alerts?limit=5&resolved=false');
+  const d = await r.json();
+  document.getElementById('alertCount').textContent = d.count || 0;
+  if (!d.data || d.data.length === 0) {
+    document.getElementById('recentAlerts').innerHTML = '<div class="text-muted small text-center py-3"><i class="fas fa-check-circle me-2 text-success"></i>No open alerts</div>';
+    return;
+  }
+  const rows = d.data.map(a => `
+    <div class="card-dark2 mb-2 d-flex justify-content-between align-items-start">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">${severity_badge(a.severity)}<span style="font-size:0.82rem;color:#e6f1ff">${a.alert_type}</span></div>
+        <div style="font-size:0.8rem;color:#8892b0">${a.message}</div>
+        <div style="font-size:0.72rem;color:#8892b0;margin-top:3px"><i class="fas fa-clock me-1"></i>${new Date(a.timestamp).toLocaleString()}</div>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('recentAlerts').innerHTML = rows;
+}
+
+async function loadLogStats() {
+  const r = await fetch('/api/logs?limit=1');
+  const d = await r.json();
+  if (!d.stats) return;
+  const s = d.stats;
+  const sb = s.severity_breakdown || {};
+  document.getElementById('logStats').innerHTML = `
+    <div class="row g-2">
+      <div class="col-6"><div class="card-dark2 text-center"><div class="stat-label">Total Events</div><div style="font-size:1.3rem;color:#e6f1ff">${s.total_events}</div></div></div>
+      <div class="col-6"><div class="card-dark2 text-center"><div class="stat-label">Total Alerts</div><div style="font-size:1.3rem;color:#e6f1ff">${s.total_alerts}</div></div></div>
+      ${Object.entries(sb).map(([sev,cnt])=>`
+        <div class="col-6"><div class="card-dark2 d-flex justify-content-between align-items-center">
+          ${severity_badge(sev)}<span style="font-size:1rem;color:#e6f1ff">${cnt}</span>
+        </div></div>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function triggerTestAlert() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Triggering…';
+  const r = await fetch('/api/trigger-test-alert', {method:'POST'});
+  const d = await r.json();
+  document.getElementById('testAlertMsg').innerHTML = d.success
+    ? `<span style="color:#23d160"><i class="fas fa-check me-1"></i>Test alert triggered!</span>`
+    : `<span style="color:#ff3860">Failed: ${d.error}</span>`;
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-vial me-2"></i>Trigger Test Alert';
+  setTimeout(()=>{ document.getElementById('testAlertMsg').innerHTML = ''; }, 4000);
+  loadAlerts();
+}
+
+function formatUptime(secs) {
+  const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+  return `${h}h ${m}m ${s}s`;
+}
+
+async function loadAll() {
+  document.getElementById('loadSpinner').style.display = 'inline-block';
+  await Promise.all([loadStatus(), loadAlerts(), loadLogStats()]);
+  document.getElementById('loadSpinner').style.display = 'none';
+}
+
+function startCountdown() {
+  countdownVal = 30;
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    countdownVal--;
+    document.getElementById('countdownVal').textContent = countdownVal;
+    if (countdownVal <= 0) { loadAll(); countdownVal = 30; }
+  }, 1000);
+}
+
+loadAll();
+startCountdown();
+</script>
+{% endblock %}

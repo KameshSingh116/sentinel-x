@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Processes — Sentinel-X{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-title"><i class="fas fa-microchip me-2 text-info"></i>Running Processes</div>
+  <button class="btn-accent" onclick="loadProcesses()"><i class="fas fa-rotate me-1"></i>Refresh</button>
+</div>
+
+<div class="page-body">
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card accent"><div class="stat-label">Total Processes</div><div class="stat-value" id="totalProcs">—</div><i class="fas fa-list stat-icon"></i></div></div>
+    <div class="col-md-3"><div class="stat-card danger"><div class="stat-label">Flagged</div><div class="stat-value" id="flaggedProcs">—</div><i class="fas fa-flag stat-icon"></i></div></div>
+  </div>
+
+  <div class="card-dark">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h6 class="mb-0 text-info"><i class="fas fa-microchip me-2"></i>Process List <span style="font-size:0.72rem;color:#8892b0">(Top 50 by CPU)</span></h6>
+      <div class="d-flex gap-2">
+        <input id="searchInput" type="text" class="form-control form-control-sm" placeholder="Search process…" style="background:var(--bg-dark);color:#ccd6f6;border:1px solid var(--border);width:180px" onkeyup="filterTable()"/>
+        <label style="font-size:0.8rem;color:#8892b0;display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="flaggedOnly" onchange="filterTable()"> Flagged only
+        </label>
+      </div>
+    </div>
+    <div id="processTable">Loading…</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allProcs = [];
+
+async function loadProcesses() {
+  const r = await fetch('/api/processes');
+  const d = await r.json();
+  if (!d.success) return;
+  allProcs = d.data;
+  document.getElementById('totalProcs').textContent = d.total;
+  document.getElementById('flaggedProcs').textContent = d.flagged_count;
+  renderTable();
+}
+
+function renderTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const flagOnly = document.getElementById('flaggedOnly').checked;
+  const filtered = allProcs.filter(p => {
+    const match = (p.name||'').toLowerCase().includes(q) || String(p.pid).includes(q);
+    return match && (!flagOnly || p.flagged);
+  });
+
+  if (filtered.length === 0) {
+    document.getElementById('processTable').innerHTML = '<div class="text-muted text-center py-4">No processes found</div>';
+    return;
+  }
+
+  const rows = filtered.map(p => `
+    <tr>
+      <td style="font-size:0.8rem;color:#8892b0">${p.pid}</td>
+      <td>
+        <span style="font-size:0.85rem;color:${p.flagged?'#ff3860':'#e6f1ff'}">${p.name||'?'}</span>
+        ${p.flagged ? '<span class="badge badge-severity-high ms-1">FLAGGED</span>' : ''}
+      </td>
+      <td style="font-size:0.8rem;color:#8892b0">${p.username||'—'}</td>
+      <td>
+        <div style="font-size:0.8rem;color:${p.cpu_percent>50?'#ff3860':p.cpu_percent>20?'#ffdd57':'#e6f1ff'}">${p.cpu_percent}%</div>
+        <div class="progress-bar-custom" style="width:80px"><div class="progress-fill" style="width:${Math.min(p.cpu_percent,100)}%;background:${p.cpu_percent>50?'#ff3860':'#00d4ff'}"></div></div>
+      </td>
+      <td>
+        <div style="font-size:0.8rem;color:#e6f1ff">${p.memory_percent}%</div>
+        <div class="progress-bar-custom" style="width:80px"><div class="progress-fill" style="width:${Math.min(p.memory_percent*5,100)}%;background:#7b2ff7"></div></div>
+      </td>
+      <td><span class="badge ${p.status==='running'?'bg-success':p.status==='sleeping'?'bg-secondary':'bg-warning'}">${p.status}</span></td>
+      <td style="font-size:0.72rem;color:#8892b0;white-space:nowrap">${p.create_time ? new Date(p.create_time).toLocaleString() : '—'}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('processTable').innerHTML = `
+    <div style="overflow-x:auto">
+    <table class="table-dark-custom">
+      <thead><tr><th>PID</th><th>Name</th><th>User</th><th>CPU %</th><th>Mem %</th><th>Status</th><th>Started</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>
+  `;
+}
+
+function filterTable() { renderTable(); }
+
+loadProcesses();
+setInterval(loadProcesses, 15000);
+</script>
+{% endblock %}

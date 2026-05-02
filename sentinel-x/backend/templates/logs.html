@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Event Logs — Sentinel-X{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div class="topbar-title"><i class="fas fa-list-ul me-2 text-info"></i>Event Logs</div>
+  <button class="btn-accent" onclick="loadLogs()"><i class="fas fa-rotate me-1"></i>Refresh</button>
+</div>
+
+<div class="page-body">
+  <div class="card-dark mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h6 class="mb-0 text-info"><i class="fas fa-database me-2"></i>System Events</h6>
+      <div class="d-flex gap-2 flex-wrap">
+        <select id="filterSeverity" class="form-select form-select-sm" style="background:var(--bg-dark);color:#ccd6f6;border:1px solid var(--border);width:auto" onchange="loadLogs()">
+          <option value="">All Severities</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="warning">Warning</option>
+          <option value="medium">Medium</option>
+          <option value="info">Info</option>
+          <option value="error">Error</option>
+        </select>
+        <select id="filterLimit" class="form-select form-select-sm" style="background:var(--bg-dark);color:#ccd6f6;border:1px solid var(--border);width:auto" onchange="loadLogs()">
+          <option value="50">50</option>
+          <option value="100" selected>100</option>
+          <option value="250">250</option>
+          <option value="500">500</option>
+        </select>
+        <input id="searchInput" type="text" class="form-control form-control-sm" placeholder="Search…" style="background:var(--bg-dark);color:#ccd6f6;border:1px solid var(--border);width:180px" onkeyup="filterTable()"/>
+      </div>
+    </div>
+    <div id="statsBar" class="mb-3"></div>
+    <div id="logsTable">Loading…</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allRows = [];
+
+function severity_badge(sev) {
+  return `<span class="badge badge-severity-${sev} rounded-pill">${sev.toUpperCase()}</span>`;
+}
+
+async function loadLogs() {
+  const sev = document.getElementById('filterSeverity').value;
+  const limit = document.getElementById('filterLimit').value;
+  let url = `/api/logs?limit=${limit}`;
+  if (sev) url += `&severity=${sev}`;
+  const r = await fetch(url);
+  const d = await r.json();
+  if (!d.success) return;
+
+  const stats = d.stats || {};
+  const sb = stats.severity_breakdown || {};
+  document.getElementById('statsBar').innerHTML = `
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <span style="font-size:0.75rem;color:#8892b0">Total Events: <strong style="color:#e6f1ff">${stats.total_events||0}</strong></span>
+      ${Object.entries(sb).map(([s,c])=>`${severity_badge(s)} <span style="font-size:0.75rem;color:#8892b0;margin-right:6px">${c}</span>`).join('')}
+    </div>
+  `;
+
+  allRows = d.data.map(e => `
+    <tr class="log-row" data-text="${(e.event_type+' '+e.description+' '+e.source).toLowerCase()}">
+      <td style="font-size:0.72rem;color:#8892b0;white-space:nowrap">${new Date(e.timestamp).toLocaleString()}</td>
+      <td>${severity_badge(e.severity)}</td>
+      <td><span style="font-size:0.8rem;color:#00d4ff">${e.event_type}</span></td>
+      <td style="font-size:0.8rem;color:#ccd6f6;max-width:360px">${e.description}</td>
+      <td style="font-size:0.72rem;color:#8892b0">${e.source||'system'}</td>
+    </tr>
+  `);
+
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = allRows.join('');
+  document.getElementById('logsTable').innerHTML = `
+    <div style="overflow-x:auto">
+    <table class="table-dark-custom" id="logTableEl">
+      <thead><tr><th>Timestamp</th><th>Severity</th><th>Event Type</th><th>Description</th><th>Source</th></tr></thead>
+      <tbody>${tbody}</tbody>
+    </table>
+    </div>
+    ${allRows.length === 0 ? '<div class="text-muted text-center py-4">No events found</div>' : ''}
+  `;
+}
+
+function filterTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.log-row').forEach(row => {
+    row.style.display = row.dataset.text.includes(q) ? '' : 'none';
+  });
+}
+
+loadLogs();
+setInterval(loadLogs, 30000);
+</script>
+{% endblock %}

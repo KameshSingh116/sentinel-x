@@ -1,0 +1,235 @@
+Build a production-quality cybersecurity project named **"Sentinel-X: Cross-Platform Intrusion & Behavior Monitoring System"**.
+
+## 🎯 Objective
+
+Create a full-stack cybersecurity system with:
+
+1. Python Backend (Flask REST API)
+2. Web Dashboard
+3. Android App (React Native preferred)
+
+The system must monitor system activity, detect anomalies, log events, and send alerts.
+
+---
+
+## ⚠️ CRITICAL REQUIREMENT: GIT & COMMITS (VERY IMPORTANT)
+
+You MUST:
+
+* Initialize a Git repository
+* Connect to GitHub repository
+* Make **frequent, logical commits after EVERY major step**
+
+### ✅ Commit Rules:
+
+* Each feature = separate commit
+* Commit messages must be meaningful
+* Do NOT dump everything in one commit
+
+### ✅ Example Commit Flow:
+
+1. "Initial project structure setup"
+2. "Added system monitoring module using psutil"
+3. "Implemented network monitoring"
+4. "Created anomaly detection logic"
+5. "Built REST API endpoints"
+6. "Added logging system (JSON + SQLite)"
+7. "Implemented email alert system"
+8. "Built Flask web dashboard"
+9. "Connected frontend with backend APIs"
+10. "Developed mobile app UI"
+11. "Integrated mobile app with backend APIs"
+12. "Improved UI and added error handling"
+13. "Updated README with documentation"
+
+Commit after EACH step.
+
+---
+
+## 🧠 SYSTEM ARCHITECTURE
+
+### Backend (Core Engine)
+
+* Python + Flask (REST API)
+* Handles:
+
+  * System monitoring
+  * Network monitoring
+  * Anomaly detection
+  * Logging
+  * Alerts
+
+---
+
+### Web Dashboard
+
+* Flask templates or React
+* Fetch data from backend APIs
+* Display logs, alerts, and system stats
+
+---
+
+### Android App
+
+* React Native (preferred) or Flutter
+* Connect to backend APIs
+* Show:
+
+  * Alerts
+  * Logs
+  * System status
+
+---
+
+## ⚙️ CORE FEATURES
+
+### 1. System Monitoring
+
+* Use `psutil`
+* Track CPU, memory, processes
+* Detect:
+
+  * CPU > 80%
+  * Unknown processes
+
+---
+
+### 2. Network Monitoring
+
+* Track active connections
+* Extract IP addresses
+* Detect suspicious/repeated connections
+
+---
+
+### 3. Anomaly Detection
+
+* Rule-based detection:
+
+  * Sudden spikes
+  * Repeated patterns
+* Design code to allow ML upgrade later
+
+---
+
+### 4. REST API (MANDATORY)
+
+Create endpoints:
+
+* `/logs`
+* `/alerts`
+* `/status`
+* `/trigger-test-alert`
+
+Return JSON responses.
+
+---
+
+### 5. Alert System
+
+* Use `smtplib`
+* Send email alerts
+* Store alerts in database
+
+---
+
+### 6. Logging System
+
+* JSON + SQLite
+* Fields:
+
+  * timestamp
+  * event
+  * severity
+  * description
+
+---
+
+## 📱 MOBILE APP REQUIREMENTS
+
+* Fetch from APIs
+* Screens:
+
+  * Dashboard
+  * Alerts
+  * Logs
+* Handle loading + errors
+* Clean UI
+
+---
+
+## 🌐 WEB DASHBOARD REQUIREMENTS
+
+* Show:
+
+  * System stats
+  * Alerts
+  * Logs
+* Auto-refresh or polling
+
+---
+
+## 🧩 PROJECT STRUCTURE
+
+sentinel-x/
+│── backend/
+│── web/
+│── mobile/
+│── logs/
+│── database/
+│── requirements.txt
+│── README.md
+
+---
+
+## 🔗 INTEGRATION
+
+* Backend runs independently
+* Web + Mobile use API
+* Configurable base URL
+
+---
+
+## 📦 REQUIREMENTS
+
+Backend:
+
+* flask
+* psutil
+
+Mobile:
+
+* axios (React Native)
+
+---
+
+## 📘 README REQUIREMENTS
+
+* Project overview
+* Features
+* Architecture explanation
+* Setup steps (backend + web + mobile)
+* API documentation
+* Screenshots (placeholder ok)
+
+---
+
+## 🧠 CODE QUALITY
+
+* Modular design
+* Clean code
+* Proper comments
+
+---
+
+## 🚀 FINAL OUTPUT
+
+* Fully working backend
+* Working web dashboard
+* Android app code ready
+* All integrated via API
+* Clean Git history with multiple commits
+
+---
+
+Do NOT give partial code. Build everything step-by-step, commit frequently, and ensure all parts work together.
